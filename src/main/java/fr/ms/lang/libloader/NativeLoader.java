@@ -24,7 +24,7 @@ package fr.ms.lang.libloader;
  * @author Marco Semiao
  *
  */
-interface NativeLoader {
+public interface NativeLoader {
 
     void load(final String filename);
 

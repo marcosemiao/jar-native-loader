@@ -1,4 +1,4 @@
-package fr.ms.lang.libloader;
+package fr.ms.lang.libloader.impl;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -7,12 +7,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.FileAlreadyExistsException;
 
+import fr.ms.lang.libloader.NativeLoader;
+
 public class JarNativeLoader implements NativeLoader {
 
     private final LibraryNameFactory libraryNameFactory;
 
     public JarNativeLoader() {
-	this(JarNativeLoader.defaultLibraryNameFactory(true));
+	this(new DefaultLibraryNameFactory());
     }
 
     public JarNativeLoader(final LibraryNameFactory libraryNameFactory) {
@@ -82,20 +84,10 @@ public class JarNativeLoader implements NativeLoader {
 	}
     }
 
-    public static LibraryNameFactory defaultLibraryNameFactory(final boolean osArch) {
-	return new DefaultLibraryNameFactory(osArch);
-    }
+    public static class DefaultLibraryNameFactory implements LibraryNameFactory {
 
-    static class DefaultLibraryNameFactory implements LibraryNameFactory {
-
-	private boolean osArch;
-
-	DefaultLibraryNameFactory() {
-
-	}
-
-	DefaultLibraryNameFactory(final boolean osArch) {
-	    this.osArch = osArch;
+	public LibraryName createLibraryName(final String path, final String libName) {
+	    return new LibraryName(path, libName);
 	}
 
 	@Override
@@ -105,21 +97,36 @@ public class JarNativeLoader implements NativeLoader {
 	    if (libname == null || lastIndexOf < 0 || length < 1) {
 		throw new IllegalArgumentException("libname : " + libname);
 	    }
-	    final StringBuilder sb = new StringBuilder();
 
 	    final String path = libname.substring(0, lastIndexOf);
-	    sb.append(path);
-	    sb.append("/");
-
-	    if (osArch) {
-		final String os = System.getProperty("os.arch");
-		sb.append(os);
-		sb.append("/");
-	    }
 	    final String libName = libname.substring(lastIndexOf + 1, length);
-	    final String mapLibraryName = System.mapLibraryName(libName);
-	    sb.append(mapLibraryName);
-	    return sb.toString();
+	    final LibraryName libraryName = createLibraryName(path, libName);
+
+	    return libraryName.getAbsolutePath();
+	}
+
+	public static class LibraryName {
+
+	    private final String path;
+
+	    private final String libName;
+
+	    public LibraryName(final String path, final String libName) {
+		this.path = path;
+		this.libName = libName;
+	    }
+
+	    public String getPath() {
+		return path;
+	    }
+
+	    public String getLibName() {
+		return libName;
+	    }
+
+	    public String getAbsolutePath() {
+		return getPath() + "/" + System.mapLibraryName(getLibName());
+	    }
 	}
     }
 }

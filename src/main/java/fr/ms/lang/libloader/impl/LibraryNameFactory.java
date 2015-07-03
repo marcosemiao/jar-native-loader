@@ -1,4 +1,4 @@
-package fr.ms.lang.libloader;
+package fr.ms.lang.libloader.impl;
 
 public interface LibraryNameFactory {
 
