@@ -6,23 +6,16 @@
 		<groupId>com.github.marcosemiao.lang.jarnativeloader</groupId>
 		<artifactId>parent</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
-		<relativePath>parent/pom.xml</relativePath>
+		<relativePath>../parent/pom.xml</relativePath>
 	</parent>
 
 	<groupId>com.github.marcosemiao.lang.jarnativeloader</groupId>
-	<artifactId>jar-native-loader</artifactId>
+	<artifactId>jar-native-loader-api</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 
-	<packaging>pom</packaging>
+	<packaging>jar</packaging>
 
-	<name>Jar Native Loader</name>
+	<name>Jar Native Loader Api</name>
 
-	<description>Loads a native code into jar file</description>
-	
-	<modules>
-		<module>parent</module>
-		<module>jar-native-loader-api</module>
-		<module>jar-native-loader-impl</module>
-		<module>jar-native-loader-system-properties</module>
-	</modules>
+	<description>Loads a native code into jar file : Api</description>
 </project>
