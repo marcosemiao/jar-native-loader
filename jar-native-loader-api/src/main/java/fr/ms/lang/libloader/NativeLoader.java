@@ -26,7 +26,7 @@ package fr.ms.lang.libloader;
  */
 public interface NativeLoader {
 
-    void load(final String filename);
+	void load(final String filename);
 
-    void loadLibrary(final String libname);
+	void loadLibrary(final String libname);
 }
