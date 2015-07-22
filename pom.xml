@@ -18,7 +18,14 @@
 	<name>Jar Native Loader</name>
 
 	<description>Loads a native code into jar file</description>
-	
+
+	<scm>
+		<connection>scm:git:git@github.com:marcosemiao/jar-native-loader.git</connection>
+		<developerConnection>scm:git:git@github.com:marcosemiao/jar-native-loader.git</developerConnection>
+		<url>https://github.com/marcosemiao/jar-native-loader</url>
+		<tag>HEAD</tag>
+	</scm>
+
 	<modules>
 		<module>parent</module>
 		<module>jar-native-loader-api</module>
