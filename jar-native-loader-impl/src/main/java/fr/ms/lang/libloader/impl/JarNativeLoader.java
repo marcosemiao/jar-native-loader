@@ -34,128 +34,135 @@ import fr.ms.lang.libloader.NativeLoader;
  */
 public class JarNativeLoader implements NativeLoader {
 
-    private final LibraryNameFactory libraryNameFactory;
+	private final LibraryNameFactory libraryNameFactory;
 
-    public static NativeLoader getInstance() {
-	return Holder.instance;
-    }
-
-    private final static class Holder {
-	private final static NativeLoader instance = new JarNativeLoader();
-    }
-
-    public JarNativeLoader() {
-	this(new DefaultLibraryNameFactory());
-    }
-
-    public JarNativeLoader(final LibraryNameFactory libraryNameFactory) {
-	this.libraryNameFactory = libraryNameFactory;
-    }
-
-    public void load(final String filename) {
-	try {
-	    loadResource(filename);
-	} catch (final IOException e) {
-	    throw new RuntimeException(e);
-	}
-    }
-
-    public void loadLibrary(final String libname) {
-	try {
-	    final String filename = libraryNameFactory.mapLibraryName(libname);
-	    loadResource(filename);
-	} catch (final IOException e) {
-	    throw new RuntimeException(e);
-	}
-    }
-
-    public static void loadResource(final String path) throws IOException {
-	final InputStream is = JarNativeLoader.class.getResourceAsStream(path);
-	if (is == null) {
-	    throw new UnsatisfiedLinkError("Resource " + path + " not found");
-	}
-	final String suffix = path.substring(path.lastIndexOf("/") + 1, path.length());
-
-	File nativeFile = null;
-	try {
-	    nativeFile = File.createTempFile("jarNative", suffix);
-	    createFile(is, nativeFile);
-	    System.load(nativeFile.getAbsolutePath());
-	} finally {
-	    // if (nativeFile != null && nativeFile.exists()) {
-	    // nativeFile.delete();
-	    // }
-	}
-    }
-
-    public static File createFile(final InputStream is, final File target) throws IOException {
-	if (is == null) {
-	    throw new NullPointerException("InputStream is null");
-	}
-	if (target.exists()) {
-	    target.delete();
+	public static NativeLoader getInstance() {
+		return Holder.instance;
 	}
 
-	OutputStream outputStream = null;
-	try {
-	    int read;
-	    final byte[] bytes = new byte[1024];
-
-	    outputStream = new FileOutputStream(target);
-
-	    while ((read = is.read(bytes)) != -1) {
-		outputStream.write(bytes, 0, read);
-	    }
-	    return target;
-	} finally {
-	    if (outputStream != null) {
-		outputStream.close();
-	    }
-	}
-    }
-
-    public static class DefaultLibraryNameFactory implements LibraryNameFactory {
-
-	public LibraryName createLibraryName(final String path, final String libName) {
-	    return new LibraryName(path, libName);
+	private final static class Holder {
+		private final static NativeLoader instance = new JarNativeLoader();
 	}
 
-	public String mapLibraryName(final String libname) {
-	    final int lastIndexOf = libname.lastIndexOf("/");
-	    final int length = libname.length();
-	    if (libname == null || lastIndexOf < 0 || length < 1) {
-		throw new IllegalArgumentException("libname : " + libname);
-	    }
-
-	    final String path = libname.substring(0, lastIndexOf);
-	    final String libName = libname.substring(lastIndexOf + 1, length);
-	    final LibraryName libraryName = createLibraryName(path, libName);
-
-	    return libraryName.getAbsolutePath();
+	public JarNativeLoader() {
+		this(new DefaultLibraryNameFactory());
 	}
 
-	public static class LibraryName {
-
-	    private final String path;
-
-	    private final String libName;
-
-	    public LibraryName(final String path, final String libName) {
-		this.path = path;
-		this.libName = libName;
-	    }
-
-	    public String getPath() {
-		return path;
-	    }
-
-	    public String getLibName() {
-		return System.mapLibraryName(libName);
-	    }
-
-	    public String getAbsolutePath() {
-		return getPath() + "/" + getLibName();
-	    }
+	public JarNativeLoader(final LibraryNameFactory libraryNameFactory) {
+		this.libraryNameFactory = libraryNameFactory;
 	}
-    }
+
+	public void load(final String filename) {
+		try {
+			loadResource(filename);
+		} catch (final IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public void loadLibrary(final String libname) {
+		try {
+			final String filename = libraryNameFactory.mapLibraryName(libname);
+			loadResource(filename);
+		} catch (final IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private static final File tmpdir = new File(System.getProperty("java.io.tmpdir"));
+
+	public static void loadResource(final String path) throws IOException {
+
+		final InputStream is = JarNativeLoader.class.getResourceAsStream(path);
+		if (is == null) {
+			throw new UnsatisfiedLinkError("Resource " + path + " not found");
+		}
+
+		File nativeFile = null;
+		try {
+			nativeFile = new File(tmpdir, path);
+			createFile(is, nativeFile);
+			System.load(nativeFile.getAbsolutePath());
+		} finally {
+			if (nativeFile != null && nativeFile.exists()) {
+				nativeFile.delete();
+			}
+		}
+	}
+
+	public static File createFile(final InputStream is, final File target) throws IOException {
+		if (is == null) {
+			throw new NullPointerException("InputStream is null");
+		}
+		if (target.exists()) {
+			target.delete();
+		}
+
+		final File directory = target.getParentFile();
+		if (directory != null) {
+			directory.mkdirs();
+		}
+
+		OutputStream outputStream = null;
+		try {
+			int read;
+			final byte[] bytes = new byte[1024];
+
+			outputStream = new FileOutputStream(target);
+
+			while ((read = is.read(bytes)) != -1) {
+				outputStream.write(bytes, 0, read);
+			}
+			return target;
+		} finally {
+			if (outputStream != null) {
+				outputStream.close();
+			}
+		}
+	}
+
+	public static class DefaultLibraryNameFactory implements LibraryNameFactory {
+
+		public LibraryName createLibraryName(final String path, final String libName) {
+			return new LibraryName(path, libName);
+		}
+
+		public String mapLibraryName(final String libname) {
+			final int lastIndexOf = libname.lastIndexOf("/");
+			final int length = libname.length();
+			if (libname == null || lastIndexOf < 0 || length < 1) {
+				throw new IllegalArgumentException("libname : " + libname);
+			}
+
+			final String path = libname.substring(0, lastIndexOf);
+			final String libName = libname.substring(lastIndexOf + 1, length);
+			final LibraryName libraryName = createLibraryName(path, libName);
+
+			return libraryName.getAbsolutePath();
+		}
+
+		public static class LibraryName {
+
+			private final String path;
+
+			private final String libName;
+
+			public LibraryName(final String path, final String libName) {
+				this.path = path;
+				this.libName = libName;
+			}
+
+			public String getPath() {
+				return path;
+			}
+
+			public String getLibName() {
+				return System.mapLibraryName(libName);
+			}
+
+			public String getAbsolutePath() {
+				return getPath() + "/" + getLibName();
+			}
+		}
+	}
 }
