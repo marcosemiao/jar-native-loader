@@ -16,11 +16,15 @@
  */
 package fr.ms.lang.libloader.impl;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import fr.ms.lang.libloader.NativeLoader;
 
@@ -33,6 +37,10 @@ import fr.ms.lang.libloader.NativeLoader;
  *
  */
 public class JarNativeLoader implements NativeLoader {
+
+	private static Logger LOG = Logger.getLogger(JarNativeLoader.class.getName());
+
+	private static final File TMPDIR = new File(System.getProperty("java.io.tmpdir"));
 
 	private final LibraryNameFactory libraryNameFactory;
 
@@ -54,6 +62,7 @@ public class JarNativeLoader implements NativeLoader {
 
 	public void load(final String filename) {
 		try {
+			loadDescriptor(filename, false);
 			loadResource(filename);
 		} catch (final IOException e) {
 			throw new RuntimeException(e);
@@ -63,26 +72,80 @@ public class JarNativeLoader implements NativeLoader {
 	public void loadLibrary(final String libname) {
 		try {
 			final String filename = libraryNameFactory.mapLibraryName(libname);
+
+			if (LOG.isLoggable(Level.FINE)) {
+				LOG.fine("Resolution du chemin : " + libname + " en : " + filename);
+			}
+
+			loadDescriptor(filename, true);
 			loadResource(filename);
 		} catch (final IOException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
-	private static final File tmpdir = new File(System.getProperty("java.io.tmpdir"));
+	private InputStream openResource(final String resourceName) {
+		final InputStream is = JarNativeLoader.class.getResourceAsStream(resourceName);
+		return is;
+	}
 
-	public static void loadResource(final String path) throws IOException {
+	private void loadDescriptor(final String filename, final boolean isLoadLibrary) throws IOException {
+		final String filenameDescriptor = filename + ".desc";
 
-		final InputStream is = JarNativeLoader.class.getResourceAsStream(path);
+		final InputStream is = openResource(filenameDescriptor);
+
+		if (is == null) {
+			return;
+		}
+
+		if (LOG.isLoggable(Level.FINE)) {
+			LOG.fine("Fichier de description trouvé : " + filenameDescriptor);
+		}
+		BufferedReader reader = null;
+		try {
+			reader = new BufferedReader(new InputStreamReader(is));
+			String libName;
+			while ((libName = reader.readLine()) != null) {
+				if (isLoadLibrary) {
+					loadLibrary(libName);
+				} else {
+					load(libName);
+				}
+			}
+			reader.close();
+		} finally {
+			if (reader != null) {
+				reader.close();
+			}
+		}
+	}
+
+	public void loadResource(final String path) throws IOException {
+
+		final InputStream is = openResource(path);
 		if (is == null) {
 			throw new UnsatisfiedLinkError("Resource " + path + " not found");
 		}
 
 		File nativeFile = null;
 		try {
-			nativeFile = new File(tmpdir, path);
-			createFile(is, nativeFile);
+			nativeFile = new File(TMPDIR, path);
+			nativeFile.delete();
+			if (nativeFile.exists()) {
+				if (LOG.isLoggable(Level.INFO)) {
+					LOG.fine("Impossible de supprimer le fichier temporaire " + nativeFile
+							+ " - Il doit surement etre deja utilisé");
+				}
+			} else {
+				createFile(is, nativeFile);
+				if (LOG.isLoggable(Level.FINE)) {
+					LOG.fine(
+							"Copie de la librairie " + path + " du classpath vers un fichier temporaire " + nativeFile);
+				}
+			}
+
 			System.load(nativeFile.getAbsolutePath());
+
 		} finally {
 			if (nativeFile != null && nativeFile.exists()) {
 				nativeFile.delete();

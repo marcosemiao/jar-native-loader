@@ -44,5 +44,14 @@ public class PropertiesLibraryNameFactory extends DefaultLibraryNameFactory {
 		public String getAbsolutePath() {
 			return MessagePropertiesFormat.format(getPath()) + "/" + getLibName();
 		}
+
+		@Override
+		public String toString() {
+			final StringBuilder builder = new StringBuilder();
+			builder.append("PropertiesLibraryName [getAbsolutePath()=");
+			builder.append(getAbsolutePath());
+			builder.append("]");
+			return builder.toString();
+		}
 	}
 }
