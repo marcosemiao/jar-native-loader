@@ -4,13 +4,13 @@
 	<parent>
 		<groupId>com.github.marcosemiao.lang.jarnativeloader</groupId>
 		<artifactId>parent</artifactId>
-		<version>0.0.2</version>
+		<version>0.0.3-SNAPSHOT</version>
 		<relativePath>../parent/pom.xml</relativePath>
 	</parent>
 
 	<groupId>com.github.marcosemiao.lang.jarnativeloader</groupId>
 	<artifactId>jar-native-loader-system-properties</artifactId>
-	<version>0.0.2</version>
+	<version>0.0.3-SNAPSHOT</version>
 
 	<packaging>jar</packaging>
 
