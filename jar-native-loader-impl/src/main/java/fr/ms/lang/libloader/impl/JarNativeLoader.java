@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -40,7 +42,10 @@ public class JarNativeLoader implements NativeLoader {
 
 	private static Logger LOG = Logger.getLogger(JarNativeLoader.class.getName());
 
-	private static final File TMPDIR = new File(System.getProperty("java.io.tmpdir"));
+	private static final File TMPDIR = new File(System.getProperty("java.io.tmpdir"),
+			String.valueOf(System.currentTimeMillis()));
+
+	private static final Set<File> jniLoaded = new HashSet<File>();
 
 	private final LibraryNameFactory libraryNameFactory;
 
@@ -60,6 +65,7 @@ public class JarNativeLoader implements NativeLoader {
 		this.libraryNameFactory = libraryNameFactory;
 	}
 
+	@Override
 	public void load(final String filename) {
 		try {
 			loadDescriptor(filename, false);
@@ -69,6 +75,7 @@ public class JarNativeLoader implements NativeLoader {
 		}
 	}
 
+	@Override
 	public void loadLibrary(final String libname) {
 		try {
 			final String filename = libraryNameFactory.mapLibraryName(libname);
@@ -130,13 +137,7 @@ public class JarNativeLoader implements NativeLoader {
 		File nativeFile = null;
 		try {
 			nativeFile = new File(TMPDIR, path);
-			nativeFile.delete();
-			if (nativeFile.exists()) {
-				if (LOG.isLoggable(Level.INFO)) {
-					LOG.fine("Impossible de supprimer le fichier temporaire " + nativeFile
-							+ " - Il doit surement etre deja utilisé");
-				}
-			} else {
+			if (!jniLoaded.contains(nativeFile)) {
 				createFile(is, nativeFile);
 				if (LOG.isLoggable(Level.FINE)) {
 					LOG.fine(
@@ -146,10 +147,8 @@ public class JarNativeLoader implements NativeLoader {
 
 			System.load(nativeFile.getAbsolutePath());
 
+			jniLoaded.add(nativeFile);
 		} finally {
-			if (nativeFile != null && nativeFile.exists()) {
-				nativeFile.delete();
-			}
 		}
 	}
 
@@ -166,20 +165,23 @@ public class JarNativeLoader implements NativeLoader {
 			directory.mkdirs();
 		}
 
-		OutputStream outputStream = null;
+		OutputStream os = null;
 		try {
 			int read;
 			final byte[] bytes = new byte[1024];
 
-			outputStream = new FileOutputStream(target);
+			os = new FileOutputStream(target);
 
 			while ((read = is.read(bytes)) != -1) {
-				outputStream.write(bytes, 0, read);
+				os.write(bytes, 0, read);
 			}
 			return target;
 		} finally {
-			if (outputStream != null) {
-				outputStream.close();
+			if (os != null) {
+				os.close();
+			}
+			if (is != null) {
+				is.close();
 			}
 		}
 	}
@@ -190,10 +192,11 @@ public class JarNativeLoader implements NativeLoader {
 			return new LibraryName(path, libName);
 		}
 
+		@Override
 		public String mapLibraryName(final String libname) {
 			final int lastIndexOf = libname.lastIndexOf("/");
 			final int length = libname.length();
-			if (libname == null || lastIndexOf < 0 || length < 1) {
+			if ((libname == null) || (lastIndexOf < 0) || (length < 1)) {
 				throw new IllegalArgumentException("libname : " + libname);
 			}
 
